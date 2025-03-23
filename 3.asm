@@ -1,5 +1,5 @@
 section .data
-    BUF_SIZE equ 10
+    BUF_SIZE equ 50
     INT_BUF_SIZE equ 20
     buf_counter db 0
     arg_counter db 1
@@ -49,12 +49,7 @@ miu:            mov qword [one], rdi
                 mov qword [five], r8
                 mov qword [six], r9
 
-                ;push rsi
-
                 mov rbx, qword [one]
-                mov r11, rsi
-                inc byte [arg_counter]
-
                 lea rcx, buffer
 
 new_symbol:     mov al, byte [rbx]
@@ -62,10 +57,16 @@ new_symbol:     mov al, byte [rbx]
                 jne not_specifier
 
                 inc rbx
-                ;pop r11
-                push rax
+
+                movsx rax, byte [arg_counter] 
+                sal rax, 3
+                lea r8, arguments
+                add rax, r8
+                mov r11, [rax]
+                inc byte [arg_counter]
+
                 call Get_specifier
-                pop rax
+
                 inc rbx
 
                 jmp new_symbol
@@ -249,9 +250,11 @@ get_string:     mov al, byte [r11]
                 jne get_string
 
 dd:             dec rcx
-                dec byte [buf_counter]
-                
+                dec byte [buf_counter]            
                 ret                        ;// TODO почему-то работает, если строка больше размера буффера
+
+
+
 
 Buf_flush:      mov rax, 1
                 mov rdi, 1
