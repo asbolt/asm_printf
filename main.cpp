@@ -1,9 +1,9 @@
 #include <cstdio>
 
-extern "C" int miu(const char *a, ...);
+extern "C" int My_printf(const char *a, ...);
 
 int main () {
-    miu("моя мама моет тарелки %x в \n день, а мой папа %b капец hhh\n", 17, 52);
+    My_printf("123456789%d", 70);
 
     return 0;
 }
