@@ -1,9 +1,9 @@
-section .bss
-    buffer resb 10
-
 section .data
-    str: db '%%c%b%sf', 10
-    g: db 'hihi', 10
+    BUF_SIZE equ 10
+    buf_counter db 0
+
+    str: db '4%x5', 10
+    gg dd 36
 
     printf_jmp_table:
         times ('%' - 1)         dq empty
@@ -19,10 +19,15 @@ section .data
         times ('x' - 's' - 1)   dq empty         
                                 dq hex
 
+section .bss
+    buffer resb BUF_SIZE
+    result resb 20
+
 section .text
                 global _start
 
-_start:         lea rbx, str
+_start:         push gg
+                lea rbx, str
                 lea rcx, buffer
 
 new_symbol:     mov al, byte [rbx]
@@ -30,22 +35,31 @@ new_symbol:     mov al, byte [rbx]
                 jne not_specifier
 
                 inc rbx
+                pop r11
                 push rax
                 call Get_specifier
                 pop rax
                 inc rbx
+
                 jmp new_symbol
+
 
 not_specifier:  mov byte [rcx], al
                 inc rcx
                 inc rbx
+                inc byte [buf_counter]
                 cmp al, 10
-                jne new_symbol
+                je print
 
-                mov rax, 1
+                cmp byte [buf_counter], BUF_SIZE
+                jne new_symbol
+                call Buf_flush
+                jmp new_symbol
+
+print:          mov rax, 1
                 mov rdi, 1
                 mov rsi, buffer
-                mov rdx, 10
+                movsx rdx, byte [buf_counter]
                 syscall
 
                 mov rax, 60
@@ -56,7 +70,16 @@ not_specifier:  mov byte [rcx], al
 
 
 
-
+;------------------------------------------------
+; Get specifier: places the value according to the specifier into the buffer
+;                (and flushes the buffer on overflow)
+;
+; Entry:    rbx - address of one-byte specifier
+;           rcx - address of the first free buffer cell
+;           r11 - address of argument to print 
+; Exit:     rcx - new address of the first free buffer cell
+; Destr:    rsi
+;------------------------------------------------
 Get_specifier:  movsx rsi, byte [rbx]
                 dec rsi
                 lea rax, printf_jmp_table
@@ -65,43 +88,102 @@ Get_specifier:  movsx rsi, byte [rbx]
 percent:        call Get_percent
                 jmp empty
 
-bin:            call Get_digit
+bin:            mov r12, 2
+                call Get_digit
                 jmp empty
 
 char:           call Get_char
                 jmp empty
 
-dec:            call Get_digit
+dec:            mov r12, 10
+                call Get_digit
                 jmp empty
 
-oct:            call Get_digit
+oct:            mov r12, 8
+                call Get_digit
                 jmp empty
 
 string:         call Get_string
                 jmp empty
 
-hex:            call Get_digit
+hex:            mov r12, 16
+                call Get_digit
 
-empty:        ret
+empty:          ret
 
 
 
-Get_percent:    mov [rcx], byte 'A'
+Get_percent:    mov al, '%'
+                mov byte [rcx], al
                 inc rcx
-                jmp empty
+                inc byte [buf_counter]
                 ret
 
-Get_char:       mov [rcx], byte 'B'
+Get_char:       mov al, byte [r11]
+                mov byte [rcx], al
                 inc rcx
-                jmp empty
+                inc byte [buf_counter]
                 ret
 
-Get_digit:      mov [rcx], byte 'C'
+
+
+
+Get_digit:      
+                push rax
+                push rdx
+                lea r13, result + 18
+                movsx rax, dword [r11]
+
+Next:           
+                div r12
+                mov byte [r13], dl
+                add byte [r13], '0'
+                cmp byte [r13], '9'
+                jb Next2
+                add byte [r13], 'a' - '0' - 10
+
+Next2           mov rdx, 0
+                dec r13
+                cmp rax, 0
+                jne Next
+
+                inc r13
+
+Next1:          mov al, [r13]
+                mov byte [rcx], al
+                inc r13
                 inc rcx
-                jmp empty
+                inc byte [buf_counter]
+                cmp al, 0
+                jne Next1
+
+                dec rcx
+                pop rdx
+                pop rax
                 ret
 
-Get_string:     mov [rcx], byte 'D'
+
+
+
+Get_string:     
+get_string:     mov al, byte [r11]
+                mov byte [rcx], al
                 inc rcx
-                jmp empty
+                inc r11
+                inc byte [buf_counter]
+                cmp al, 10
+                jne get_string
+
+                dec rcx
+                dec byte [buf_counter]
+                ret                        ;// TODO не сработает, если строка больше размера буффера
+
+Buf_flush:      mov rax, 1
+                mov rdi, 1
+                mov rsi, buffer
+                mov rdx, BUF_SIZE
+                syscall
+
+                mov byte [buf_counter], 0
+                lea rcx, buffer
                 ret
