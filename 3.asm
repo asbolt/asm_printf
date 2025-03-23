@@ -2,6 +2,7 @@ section .data
     BUF_SIZE equ 10
     INT_BUF_SIZE equ 20
     buf_counter db 0
+    arg_counter db 1
 
     str: db 'hi-hi %d ha-ha', 10, 0
     argument dd -13789
@@ -25,14 +26,35 @@ section .data
 section .bss
     buffer resb BUF_SIZE
     result resb INT_BUF_SIZE
+    num resq 1
+
+    arguments:
+    one resq 1
+    two resq 1
+    three resq 1
+    four resq 1
+    five resq 1
+    six resq 1
+    
 
 
 
 section .text
-                global _start
+                global miu
 
-_start:         push argument
-                lea rbx, str
+miu:            mov qword [one], rdi
+                mov qword [two], rsi
+                mov qword [three], rdx
+                mov qword [four], rcx
+                mov qword [five], r8
+                mov qword [six], r9
+
+                ;push rsi
+
+                mov rbx, qword [one]
+                mov r11, rsi
+                inc byte [arg_counter]
+
                 lea rcx, buffer
 
 new_symbol:     mov al, byte [rbx]
@@ -40,7 +62,7 @@ new_symbol:     mov al, byte [rbx]
                 jne not_specifier
 
                 inc rbx
-                pop r11
+                ;pop r11
                 push rax
                 call Get_specifier
                 pop rax
@@ -142,8 +164,7 @@ Get_percent:    mov al, '%'
 ;           buf_counter - amount occupied cells in buffer 
 ; Destr:    al
 ;------------------------------------------------
-Get_char:       mov al, byte [r11]
-                mov byte [rcx], al
+Get_char:       mov [rcx], r11
                 inc rcx
                 inc byte [buf_counter]
                 ret
@@ -166,14 +187,19 @@ Get_digit:
                 push rax
                 push rdx
                 lea r13, result + 18
-                movsx rax, dword [r11]
+                mov rax, r11
+                ;mov qword [num], r11          
 
-                cmp dword [r11], 0
+                mov rdx, 0
+
+                cmp rax, 2147483647
                 jb Next
-                mov byte [rcx], '-' 
+                mov byte [rcx], '-'
+                neg rax
+                cwde
                 inc rcx
                 inc byte [buf_counter]
-                neg rax
+                ;neg rax
 
 Next:           div r12
                 mov byte [r13], dl
