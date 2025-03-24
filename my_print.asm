@@ -2,8 +2,7 @@ section .text
                 global My_printf
 
 My_printf:      
-                pop rax                                 ;
-                ;mov qword [save_rbp], rax
+                pop rax                                 ; TODO
 
                 push r9                                 ;  save arguments
                 push r8                                 ;  
@@ -12,7 +11,6 @@ My_printf:
                 push rsi                                ; 
                 push rdi                                ; 
 
-                ;mov rbx, qword [one]
                 pop rbx
                 lea rcx, buffer
 
@@ -22,18 +20,7 @@ new_symbol:     mov al, byte [rbx]
                 jne not_specifier
 
                 inc rbx
-
-                ;cmp byte [arg_counter], 5               ;  if number of argument <= 6,
-                ;ja stack_arg                            ;  get it from reg
-                ;movsx rax, byte [arg_counter]           ;    
-                ;sal rax, 3                              ;  if number of argument > 6,
-                ;lea r8, arguments                       ;  get it from stack          ---|
-                ;add rax, r8                             ;                                |
-                ;mov r11, [rax]                          ;                                |    
-                ;inc byte [arg_counter]                  ;                                |    
-                ;jmp get_specifier                       ;                                |           
-                                                        ;                                |    
-stack_arg:      pop r11                                 ;  <-----------------------------|    
+                pop r11                                 ;  r11 - current argument  
  
 get_specifier:  call Get_specifier
                 inc rbx                                 ;  skip specifier in string
@@ -287,7 +274,6 @@ section .data
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
 section .bss
-    save_rbp    resq 1
     buffer      resb BUF_SIZE
     int_buffer  resb INT_BUF_SIZE
 
