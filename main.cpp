@@ -1,9 +1,9 @@
 #include <cstdio>
 
-extern "C" int My_printf(const char *a, ...);
+extern "C" void My_printf(const char *a, ...);
 
 int main () {
-    My_printf("\n", 123456);
-
+    My_printf("%d %d %d\n", 1, 2, 3);
+    printf ("hello\n");
     return 0;
 }
