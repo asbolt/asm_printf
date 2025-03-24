@@ -18,7 +18,7 @@ new_symbol:     mov al, byte [rbx]
 
                 inc rbx
 
-                cmp byte [arg_counter], 6               ;  if number of argument <= 6,
+                cmp byte [arg_counter], 5               ;  if number of argument <= 6,
                 ja stack_arg                            ;  get it from reg
                 movsx rax, byte [arg_counter]           ;    
                 sal rax, 3                              ;  if number of argument > 6,
@@ -41,7 +41,7 @@ not_specifier:  mov byte [rcx], al
                 cmp al, 0                               ;  if it is string end, go to end of function
                 je print                                ;  
 
-check_overflw:  cmp byte [buf_counter], BUF_SIZE    
+check_overflw:  cmp byte [buf_counter], byte BUF_SIZE    
                 jne new_symbol
                 call Buf_flush
                 jmp new_symbol
@@ -184,11 +184,19 @@ mov_in_buf:     mov al, [r13]                           ;  mov number from int_b
                 inc rcx
                 inc byte [buf_counter]
                 cmp al, 0
-                jne mov_in_buf
+                je end_num
 
+                cmp byte [buf_counter], byte BUF_SIZE
+                jb mov_in_buf
+                push r11
+                call Buf_flush
+                pop r11
+                jmp mov_in_buf
+
+end_num:        dec byte [buf_counter]
                 dec rcx
                 pop rdx
-                ret                                     ; TODO ломается, если больше буффера
+                ret
 
 
 
@@ -208,12 +216,14 @@ Get_string:     mov al, byte [r11]                      ;  copy byte argument ->
                 inc r11                                 ;  
                 inc byte [buf_counter]                  ;   
                 cmp al, 0                               ;  
-                jne Get_string                          ;   
+                je end_string                           ;   
 
-                ;cmp byte [buf_counter], BUF_SIZE       ; TODO ломается, если больше буффера
-                ;jne Get_string
-                ;;call Buf_flush
-                ;jmp Get_string
+                cmp byte [buf_counter], byte BUF_SIZE
+                jb Get_string
+                push r11
+                call Buf_flush
+                pop r11
+                jmp Get_string
 
 end_string:     dec rcx
                 dec byte [buf_counter]            
@@ -246,7 +256,7 @@ Buf_flush:      mov rax, 1
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
 section .data
-    BUF_SIZE        equ 10
+    BUF_SIZE        equ 50
     INT_BUF_SIZE    equ 20
     MAX_SIG_INT     equ 2147483647
 
