@@ -2,16 +2,17 @@ section .text
                 global My_printf
 
 My_printf:      
-                pop rax                                 ; TODO
+                push rbp
+                mov rbp, rsp
 
-                push r9                                 ;  save arguments
-                push r8                                 ;  
-                push rcx                                ;    
-                push rdx                                ; 
-                push rsi                                ; 
-                push rdi                                ; 
+                mov qword [one], rdi                    ;  save arguments
+                mov qword [two], rsi                    ;  
+                mov qword [three], rdx                  ;    
+                mov qword [four], rcx                   ; 
+                mov qword [five], r8                    ; 
+                mov qword [six], r9                     ; 
 
-                pop rbx
+                mov rbx, qword [one]
                 lea rcx, buffer
 
 
@@ -20,7 +21,17 @@ new_symbol:     mov al, byte [rbx]
                 jne not_specifier
 
                 inc rbx
-                pop r11                                 ;  r11 - current argument  
+                cmp byte [arg_counter], 5               ;  if number of argument <= 6,
+                ja stack_arg                            ;  get it from reg
+                movsx rax, byte [arg_counter]           ;    
+                sal rax, 3                              ;  if number of argument > 6,
+                lea r8, arguments                       ;  get it from stack          ---|
+                add rax, r8                             ;                                |
+                mov r11, [rax]                          ;                                |    
+                inc byte [arg_counter]                  ;                                |    
+                jmp get_specifier                       ;                                |           
+                                                        ;                                |    
+stack_arg:      mov r11, '!'                            ;  <-----------------------------|                        
  
 get_specifier:  call Get_specifier
                 inc rbx                                 ;  skip specifier in string
@@ -45,9 +56,8 @@ print:          mov rax, 1
                 movsx rdx, byte [buf_counter]
                 syscall
 
-                mov rax, 60
-                mov rdi, 0
-                syscall
+                leave
+                ret
 
 
 
@@ -254,6 +264,7 @@ section .data
 
     buf_counter db 0
     arg_counter db 1
+    stack_counter db 1
 
     printf_jmp_table:
         times ('%' - 1)         dq empty
@@ -276,6 +287,7 @@ section .data
 section .bss
     buffer      resb BUF_SIZE
     int_buffer  resb INT_BUF_SIZE
+    save_esp    resq 1
 
     arguments:
         one     resq 1
