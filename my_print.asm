@@ -73,7 +73,7 @@ percent:        call Get_percent                        ;           our_specifie
                 jmp empty                               ;                          <--- received address, without dec          
                                                        
 bin:            mov r12, 2                              ;  rbx - base of number system
-                call Get_digit
+                call Get_digit2
                 jmp empty
 
 char:           call Get_char
@@ -84,14 +84,18 @@ dec:            mov r12, 10                             ;  rbx - base of number 
                 jmp empty
 
 oct:            mov r12, 8                              ;  rbx - base of number system
-                call Get_digit
+                call Get_digit2
                 jmp empty
 
 string:         call Get_string
                 jmp empty
 
 hex:            mov r12, 16                             ;  rbx - base of number system
-                call Get_digit
+                call Get_digit2
+                jmp empty
+
+unsig:          mov r12, 10
+                call Get_unsig
 
 empty:          ret
 
@@ -156,13 +160,16 @@ Get_digit:      push rdx
                 cwde                                    ;  make sig-bit == 0
                 inc rcx
                 inc byte [buf_counter]
+                jmp unsig_num
+
+Get_unsig:      push rdx
+                lea r13, int_buffer + INT_BUF_SIZE - 2   
+                mov rax, r11
+                mov rdx, 0
 
 unsig_num:      div r12
                 mov byte [r13], dl
                 add byte [r13], '0'
-                cmp byte [r13], '9' + 1
-                jb not_letter
-                add byte [r13], 'a' - '0' - 10          ;  skip, if number == [1-9]
 
 not_letter:     mov rdx, 0
                 dec r13
@@ -186,6 +193,85 @@ mov_in_buf:     mov al, [r13]                           ;  mov number from int_b
                 jmp mov_in_buf
 
 end_num:        dec byte [buf_counter]
+                dec rcx
+                pop rdx
+                ret
+
+
+
+;------------------------------------------------------------------------------
+; Get digit2: part of get specifier, mov digit into buffer
+;
+; Entry:    rcx          - address of the first free buffer cell
+;           r11          - address of digit (only int!)
+;           r12          - base of number system (2, 8, 10 or 16)
+;           int_buffer   - address of the first empty cell in intermediate buffer
+;           BUF_SIZE     - size of buffer
+;           INT_BUF_SIZE - size of intermediate buffer
+; Exit:     rcx          - new address of the first free buffer cell
+;           buf_counter  - amount occupied cells in buffer 
+; Destr:    rax
+;------------------------------------------------------------------------------
+Get_digit2:     push r12 
+                mov rax, 0
+
+offset_calc:    shr r12, 1
+                inc rax
+                cmp r12, 0
+                jne offset_calc
+                dec rax
+                pop r12
+                dec r12
+
+                cmp r11, MAX_SIG_INT
+                jb b
+                push rax
+                mov rax, r11
+                mov byte [rcx], '-'
+                neg rax
+                cwde                                    ;  make sig-bit == 0
+                inc rcx
+                inc byte [buf_counter]
+                mov r11, rax
+                pop rax
+
+b:                lea r13, int_buffer + INT_BUF_SIZE - 2   
+                push rcx
+                mov cl, al
+
+unsig_num2:     mov rdx, r11
+                and rdx, r12
+                shr r11, cl
+                
+                mov byte [r13], dl
+                add byte [r13], '0'
+                cmp byte [r13], '9' + 1
+                jb not_letter2
+                add byte [r13], 'a' - '0' - 10          ;  skip, if number == [1-9]
+
+not_letter2:    dec r13
+                cmp r11, 0
+                jne unsig_num2
+                inc r13
+                pop rcx
+                mov rax, 0
+
+mov_in_buf2:    mov al, [r13]                           ;  mov number from int_buffer to buffer
+                mov byte [rcx], al
+                inc r13
+                inc rcx
+                inc byte [buf_counter]
+                cmp al, 0
+                je end_num2
+
+                cmp byte [buf_counter], byte BUF_SIZE
+                jb mov_in_buf2
+                push r11
+                call Buf_flush
+                pop r11
+                jmp mov_in_buf2
+
+end_num2:       dec byte [buf_counter]
                 dec rcx
                 pop rdx
                 ret
@@ -266,8 +352,10 @@ section .data
         times ('o' - 'd' - 1)   dq empty
                                 dq oct
         times ('s' - 'o' - 1)   dq empty
-                                dq string        
-        times ('x' - 's' - 1)   dq empty         
+                                dq string
+        times ('u' - 's' - 1)   dq empty
+                                dq unsig     
+        times ('x' - 'u' - 1)   dq empty         
                                 dq hex
 
 
