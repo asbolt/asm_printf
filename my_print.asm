@@ -12,6 +12,7 @@ My_printf:
                 push rsi                                ; 
                 push rdi                                ; 
 
+                mov rdi, 1
                 pop rbx
                 lea rcx, buffer
 
@@ -21,7 +22,14 @@ new_symbol:     mov al, byte [rbx]
                 jne not_specifier
 
                 inc rbx
-                pop r11                                 ; r11 - argument                 
+                inc rdi
+                cmp rdi, 6
+                ja hhhh
+                pop r11                                 ; r11 - argument  
+                jmp get_specifier
+hhhh:           movsx rax, byte [stack_counter]
+                inc byte [stack_counter]
+                mov r11, [rbp + 8 + rax*8]              
  
 get_specifier:  call Get_specifier
                 inc rbx                                 ;  skip specifier in string
