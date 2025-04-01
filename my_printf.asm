@@ -258,7 +258,7 @@ mov_in_buf:
     inc     rcx
     inc     byte [buf_counter]
     cmp     al, 0
-    je      end_digit2
+    je      end_digit
 
     cmp     byte [buf_counter], byte BUF_SIZE
     jb      mov_in_buf
@@ -267,7 +267,7 @@ mov_in_buf:
     pop     r11
     jmp     mov_in_buf
 
-end_digit2:        
+end_digit:        
     dec     byte [buf_counter]
     dec     rcx
     pop     rdx
