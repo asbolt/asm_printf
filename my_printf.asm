@@ -1,61 +1,68 @@
 section .text
-                global My_printf
+    global My_printf
 
 My_printf:      
-                push rbp
-                mov rbp, rsp
+    push    rbp                                ; create stack frame
+    mov     rbp, rsp
 
-                push r9                                 ;  save arguments
-                push r8                                 ;  
-                push rcx                                ;    
-                push rdx                                ; 
-                push rsi                                ; 
-                push rdi                                ; 
+    push    r9                                 ; save arguments
+    push    r8                                 ;  
+    push    rcx                                ;    
+    push    rdx                                ; 
+    push    rsi                                ; 
+    push    rdi                                ; 
 
-                mov rdi, 1
-                pop rbx
-                lea rcx, buffer
+    mov     rdi, 1                             ; rdi - arguments counter
+    pop     rbx                                ; rbx - string for print 
+    lea     rcx, buffer
 
 
-new_symbol:     mov al, byte [rbx]
-                cmp al, '%'
-                jne not_specifier
+new_symbol:     
+    mov     al, byte [rbx]
+    cmp     al, '%'
+    jne     not_specifier
 
-                inc rbx
-                inc rdi
-                cmp rdi, 6
-                ja hhhh
-                pop r11                                 ; r11 - argument  
-                jmp get_specifier
-hhhh:           movsx rax, byte [stack_counter]
-                inc byte [stack_counter]
-                mov r11, [rbp + 8 + rax*8]              
+    inc     rbx
+    inc     rdi
+    cmp     rdi, 6                              ; if argument number > 6 get it
+    ja      get_stack_argument                  ; from goo stack frame          ------
+    pop     r11                                 ;                                    |                                                    
+    jmp     get_specifier                       ;                                    |                                                     
+                                                ;                                    |    
+get_stack_argument:                             ;                                    |                    
+    movsx   rax, byte [stack_counter]           ; <----------------------------------|                                        
+    inc     byte [stack_counter]
+    mov     r11, [rbp + 8 + rax*8]              ; r11 - argument
  
-get_specifier:  call Get_specifier
-                inc rbx                                 ;  skip specifier in string
-                jmp check_overflw
+get_specifier:  
+    call    Get_specifier
+    inc     rbx                                 ; skip specifier in string
+    jmp     check_buffer_overflow
 
-not_specifier:  mov byte [rcx], al
-                inc rcx
-                inc rbx
-                inc byte [buf_counter]
-                cmp al, 0                               ;  if it is string end, go to end of function
-                je print                                ;  
+not_specifier:  
+    mov     byte [rcx], al
+    inc     rcx
+    inc     rbx
+    inc     byte [buf_counter]
+    cmp     al, 0                                ; if it is string end, go to end of function
+    je      end_my_printf                        ;  
 
-check_overflw:  cmp byte [buf_counter], byte BUF_SIZE    
-                jne new_symbol
-                call Buf_flush
-                jmp new_symbol
+check_buffer_overflow:  
+    cmp     byte [buf_counter], byte BUF_SIZE    
+    jne     new_symbol
+    call    Buf_flush
+    jmp     new_symbol
 
 
-print:          mov rax, 1
-                mov rdi, 1
-                mov rsi, buffer
-                movsx rdx, byte [buf_counter]
-                syscall
+end_my_printf:       
+    mov     rax, 1
+    mov     rdi, 1
+    mov     rsi, buffer
+    movsx   rdx, byte [buf_counter]
+    syscall
 
-                leave
-                ret
+    leave
+    ret
 
 
 
@@ -373,7 +380,6 @@ section .data
 section .bss
     buffer      resb BUF_SIZE
     int_buffer  resb INT_BUF_SIZE
-    save_esp    resq 1
 
     arguments:
         one     resq 1
